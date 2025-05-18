@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env
+.venv/
+env/
+ENV/
+
+# VSCode settings
+.vscode/
+
+# macOS system files
+.DS_Store
+
+# IDE files
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Pytest cache
+.pytest_cache/
+
+# MyPy cache
+.mypy_cache/
+
+# Pyre type checker
+.pyre/
+
+# Logs and coverage
+*.log
+*.coverage
+coverage.xml
+htmlcov/
+
+# Local config or secrets
+*.env
+*.local
+secrets.json
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Redis dump
+dump.rdb
+
+# Ignore data or temporary files
+*.json
+!candidates.json  # keep this specific file
