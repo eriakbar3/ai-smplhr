@@ -8,7 +8,7 @@ from typing import List, Dict
 
 def recruiter_agent(message, key, file):
     try:
-        print("Agent Recruiter : Hi there! 👋 You’re now chatting with our recruiter agent. Let’s find the best candidates together!")
+        # print("Agent Recruiter : Hi there! 👋 You’re now chatting with our recruiter agent. Let’s find the best candidates together!")
 
         # Generate pipeline dari pesan pengguna
         pipeline = generate_pipeline(message)
@@ -19,8 +19,8 @@ def recruiter_agent(message, key, file):
         old_json = json.loads(get_old)
 
         # Tambahkan pipeline ke histori
-        old_json['data'].append(pipeline)
-        old_json['step'] = 'generate_pipeline'
+        # old_json['data'].append(pipeline)
+        # old_json['step'] = 'generate_pipeline'
         old_json['pipeline'] = pipeline.get('pipeline', [])
         new_value = json.dumps(old_json)
         set_value(key, new_value)
@@ -52,24 +52,19 @@ def recruiter_agent(message, key, file):
         for data in pipeline.get('pipeline', []):
             print("Step type:", data['type'])
             print("Agent Recruiter:", data['message'])
-            if data['type'] != 'assess' and data['type'] != 'offer':
-                get_old = get_value(key)
-                old_json = json.loads(get_old)
-                old_json['data'].append(data)
-                old_json['step'] = data['type']
-                new_value = json.dumps(old_json)
-                set_value(key, new_value)
+            
 
             # Step: generate
             if data['type'] == 'generate':
                 print("starting:", data['type'])
                 candidate_requirement = generate_requirement(message)
-                data_res = {"message": candidate_requirement}
-
+                data_res = candidate_requirement
+                data_res['step'] = data['type']
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
                 old_json['data'].append(data_res)
                 old_json['requirement']=candidate_requirement
+                [step.update({"is_done": True}) for step in old_json["pipeline"] if step["type"] == data['type']]
                 new_value = json.dumps(old_json)
                 set_value(key, new_value)
 
@@ -79,7 +74,7 @@ def recruiter_agent(message, key, file):
             if data["type"] == 'filter':
                 print("starting:", data['type'])
                 res = filter_candidate(candidate_requirement)
-
+                res['step'] = data['type']
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
                 old_json['data'].append(res)
@@ -95,7 +90,7 @@ def recruiter_agent(message, key, file):
 
                 candidate_data = screening_file if screening_file else candidate_filter
                 res = recommend_candidate(candidate_data, candidate_requirement)
-
+                res['step'] = data['type']
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
                 old_json['data'].append(res)
@@ -108,10 +103,10 @@ def recruiter_agent(message, key, file):
 
                 candidate_data = screening_file if screening_file else candidate_filter
                 res = screening_candidate(candidate_data, candidate_requirement)
-
+                res['step'] = data['type']
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
-                old_json['data'].append(res)
+                old_json['data'].append({"is_show_data": True, "need_input":False,"message": "Berikut data kandidat yang sudah melalui tahap screening:", "data": res})
                 new_value = json.dumps(old_json)
                 set_value(key, new_value)
 
@@ -142,7 +137,7 @@ def next_recruiter_agent(data,step,key):
                 res = generate_schedule(data)
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
-                old_json['data'].append(res)
+                old_json['data'].append({"message":"Berikut adalah data kandidat yang telah dijadwalkan untuk interview:","data":res,"is_show_data":True,"is_need_input":False})
                 old_json['step'] = st['type']
                 new_value = json.dumps(old_json)
                 set_value(key, new_value)
@@ -184,7 +179,9 @@ Your response must follow this strict JSON structure:
     {{
       "step": 1,
       "type": "<action_type>",  // e.g., "generate", "filter", "screening","recommend", "schedule", "assess", "offer"
-      "message":"<direct message to user what will we do>"
+      "message":"<direct message to user what will we do>",
+      "is_done":false,
+      "title":"<title proses>"
     }},
     ...
   ]
@@ -215,22 +212,33 @@ Now respond based on this user input:
 
 def generate_requirement(message):
     prompt = f"""
-You are a smart Recruitment Assistant AI. Your task is to extract a clear, concise job requirement from the user's input.
+You are a highly intelligent Recruitment Assistant AI. Your task is to create a clear and structured **Job Description** based on the user's input.
 
-Output the result in plain text using bullet points. Focus only on these sections if available:
-- Job Title
-- Employment Type (full-time, part-time, contract, internship)
-- Experience Level (entry, mid, senior)
-- Key Responsibilities
-- Required Skills or Qualifications
-- Preferred Qualifications
+Your output **must strictly follow this JSON Format**:
+{{
+    "message": "<Provide a polite and professional message to the user summarizing the extracted job details>",
+    "is_show_data": true,
+    "need_input": false,
+    "data": "<Formatted Job Description in bullet points>"
+}}
 
+For the **data** field, follow this structure (use bullet points for each section):
+- **Job Title**: (extracted or inferred)
+- **Employment Type**: (e.g., Full-time, Part-time, Contract, Internship; make a reasonable guess if missing)
+- **Experience Level**: (e.g., Entry-level, Mid-level, Senior; make a reasonable guess if missing)
+- **Key Responsibilities**:
+  - (list responsibilities in bullet points)
+- **Required Skills or Qualifications**:
+  - (list must-have skills in bullet points)
+- **Preferred Qualifications**:
+  - (list nice-to-have skills in bullet points)
 
-response must detail.Format your response in natural language, using bullet points where appropriate. If some info is missing, make a reasonable guess.
+    If some information is missing, **infer it logically based on the context** and ensure the output is complete, professional, and easy to understand.
 
-User input:
-"{message}"
+Here’s the user’s input:
+\"{message}\"
 """
+
     try:
         client = genai.Client(
             vertexai=True,
@@ -241,10 +249,14 @@ User input:
         response = client.models.generate_content(
             model=model,
             contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+            }
         )
         print(response.text)
         if hasattr(response, "text") and isinstance(response.text, str):
-            return response.text
+            response_json = json.loads(response.text)
+            return response_json
         else:
             return "⚠️ Sorry, I couldn't generate a valid response."
     except Exception as e:
@@ -274,6 +286,8 @@ Your task is to:
 Your response must strictly follow this JSON structure:
 {{
   "message": "<brief explanation of the result, e.g., how many candidates found>",
+  "is_show_data":true,
+  "need_input":false,
   "data": [<list of filtered candidate objects>]
 }}
 User's job requirement description:
@@ -321,6 +335,8 @@ Instructions:
 Respond ONLY in this JSON format:
 {{
   "message": "<summary of how many candidates matched>",
+  "is_show_data":true,
+  "need_input":false,
   "data": [
     {{
       "name": "<candidate name>",
@@ -514,6 +530,8 @@ Your response must be formatted as a JSON object with the following structure:
 [{{
   "subject": "string",      // A concise and relevant email subject line
   "body": "string"          // The email body text, personalized with the candidate's name and details
+  "name":"string"   // candidate name
+  "email":"string" // candidate email
 }}]
 
 Guidelines:
