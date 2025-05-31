@@ -2,6 +2,7 @@ from google import genai
 from google.genai import types
 import json
 from utils.redis_client import get_value,set_value
+from utils.get_data import get_candidate_data_json
 import base64
 import traceback
 from typing import List, Dict
@@ -267,7 +268,7 @@ def load_candidates(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 def filter_candidate(criteria):
-    data_candidate = load_candidates("candidates.json")
+    data_candidate = get_candidate_data_json()
     print(data_candidate)
     prompt = f"""
 You are a recruitment assistant AI.
