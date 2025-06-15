@@ -98,4 +98,8 @@ def get_data(key: str):
 @router.get('/get-candidate')
 def get_candidate():
     data = get_candidate_data_json()
-    return json.loads(data)
+    data_json = json.loads(data)
+    filename = f"candidates_.json"
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(data_json, f, indent=4, ensure_ascii=False)
+    return {"status":"OK"}

@@ -2,7 +2,8 @@ import mysql.connector
 from mysql.connector import pooling
 import json
 import os
-
+from dotenv import load_dotenv
+load_dotenv()
 # Setup Connection Pool
 dbconfig = {
     "host": os.getenv("DB_HOST"),
@@ -11,7 +12,7 @@ dbconfig = {
     "database": os.getenv("DB_NAME"),
     "auth_plugin": 'mysql_native_password'
 }
-
+print(dbconfig)
 pool = pooling.MySQLConnectionPool(
     pool_name="mypool",
     pool_size=5,
