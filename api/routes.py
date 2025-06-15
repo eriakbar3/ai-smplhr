@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks,UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, BackgroundTasks,UploadFile, File, Form, Request
 from pydantic import BaseModel
-from controller.apps import run
+from controller.apps import run,process_candidate
 from utils.redis_client import set_value,get_value
 import json
 import base64
 from ai.recruiter import extracted_cv,next_recruiter_agent
+from utils.vector_store import search_vector_db
+from utils.get_data import get_candidate_data_json
 from typing import Any, Dict
 
 router = APIRouter()
@@ -62,6 +64,27 @@ async def generate_route(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/candidate")
+async def candidate_endpoint(request: Request):
+    body = await request.json()
+    data = body.get("data")
+
+    if not data:
+        return {"error": "Missing 'data' in payload"}
+
+    result = process_candidate(data)
+    return {"status": "ok", "vector_id": result}
+@router.post("/candidate/search")
+async def search_candidate(request: Request):
+    body = await request.json()
+    query = body.get("query")
+
+    if not query:
+        return {"error": "Missing 'query' in payload"}
+
+    results = search_vector_db(query)
+    return {"results": results}
 @router.get("/set")
 def set_data(key: str, value: str):
     set_value(key, value)
@@ -71,3 +94,8 @@ def set_data(key: str, value: str):
 def get_data(key: str):
     value = get_value(key)
     return {"key": key, "value": json.loads(value)}
+
+@router.get('/get-candidate')
+def get_candidate():
+    data = get_candidate_data_json()
+    return json.loads(data)

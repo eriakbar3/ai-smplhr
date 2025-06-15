@@ -1,18 +1,15 @@
 import mysql.connector
 import json
+import os
 
-def get_candidate_data_json(
-    host='34.57.189.211',
-    user='remote_user',
-    password='RemoteUser$2024',
-    database='db_smplhr'
-):
+def get_candidate_data_json():
     try:
+        print(os.getenv("DB_HOST"))
         conn = mysql.connector.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database,
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME"),
             auth_plugin='mysql_native_password'
         )
 

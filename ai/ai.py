@@ -23,29 +23,53 @@ def generate(question):
             location="us-central1",
         )
 
-        prompt = f"""You are an intelligent AI router that determines the most appropriate agent to handle a user's question based on their role. Choose only one agent from the list below:
+        prompt = f"""You are a smart AI router and task executor that determines the most appropriate agent to handle a user's question based on their role, and then processes the request accordingly.
 
-    1. supervisor – handles escalated issues, decision-making, and team oversight
-    2. recruiter – handles recruitment-related inquiries, job applications, and interviews
-    3. people ops – handles HR matters, employee relations, and onboarding/offboarding
-    4. payroll – handles salary, compensation, benefits, and payment-related issues
-    5. manager – handles general management, performance reviews, and project assignments
+Agent List:
+1. supervisor – handles escalated issues, decision-making, and team oversight
+2. recruiter – handles recruitment-related inquiries, job applications, and interviews
+3. people ops – handles HR matters, employee relations, and onboarding/offboarding
+4. payroll – handles salary, compensation, benefits, and payment-related issues
+5. manager – handles general management, performance reviews, and project assignments
 
-    Your task:
-    Based on the user's question below, identify the most relevant agent, explain your reasoning briefly, and provide a message to the user.
+Your Tasks:
+1. Analyze the user's input and route it to the most suitable agent from the list above.
+2. Respond with a JSON containing:
+   - The selected agent
+   - A brief explanation why the agent was chosen
+   - A welcome message from the agent
+   - The input language
+3. **If the selected agent is "recruiter"**, then:
+   - Analyze the user's input to generate a structured recruitment pipeline.
+   - The pipeline may include steps like generating requirements, screening, recommending, scheduling, assessing, and offering.
+   - If no clear job title is found, respond with a message asking the user to clarify.
 
-    notes : 
-    - Don't ask about the details.
+Constraints:
+- Do not ask unnecessary follow-up questions.
+- Identify language automatically (you may use simple rules like checking if input is in English or Indonesian).
 
-    User question: "{question}"
+Respond strictly in this JSON format:
 
-    Respond strictly in this JSON format:
-
+```json
+{{
+  "agent": "<name of the selected agent>",
+  "reason": "<brief explanation why this agent was selected>",
+  "message": "<welcome message from the agent>",
+  "language": "<detected language>",
+  "pipeline": [
     {{
-        "agent": "<name of the selected agent>",
-        "reason": "<brief explanation of why this agent is the best fit>",
-        "message": "<welcome & introduce message of the  selected agent>."
-    }}"""
+      "step": 1,
+      "type": "<action_type e.g. generate (generate reqruitement), screening (screening candidate), recommend (candidate recomendation), schedule (schedule interview), assess (assesment), and offer (offering)>", 
+      "message": "<direct message to user about what will be done>",
+      "is_done": false,
+      "title": "<process title>"
+    }}
+    // ...additional steps if applicable
+  ] // If not recruiter, set this to []
+}}
+User input:
+"{question}"
+"""
 
 
         contents = [

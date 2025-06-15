@@ -7,12 +7,12 @@ import base64
 import traceback
 from typing import List, Dict
 
-def recruiter_agent(message, key, file):
+async def recruiter_agent(message, key, file,pipeline):
     try:
         # print("Agent Recruiter : Hi there! 👋 You’re now chatting with our recruiter agent. Let’s find the best candidates together!")
 
         # Generate pipeline dari pesan pengguna
-        pipeline = generate_pipeline(message)
+        # pipeline = generate_pipeline(message)
         print("Pipeline generated:", pipeline)
 
         # Ambil data lama dari key
@@ -22,7 +22,7 @@ def recruiter_agent(message, key, file):
         # Tambahkan pipeline ke histori
         # old_json['data'].append(pipeline)
         # old_json['step'] = 'generate_pipeline'
-        old_json['pipeline'] = pipeline.get('pipeline', [])
+        old_json['pipeline'] = pipeline
         new_value = json.dumps(old_json)
         set_value(key, new_value)
 
@@ -50,16 +50,16 @@ def recruiter_agent(message, key, file):
             set_value(key, new_value)
 
         # Jalankan setiap langkah pipeline
-        for data in pipeline.get('pipeline', []):
+        for data in pipeline:
             print("Step type:", data['type'])
             print("Agent Recruiter:", data['message'])
             
-
             # Step: generate
             if data['type'] == 'generate':
                 print("starting:", data['type'])
-                candidate_requirement = generate_requirement(message)
+                candidate_requirement = await generate_requirement(message)
                 data_res = candidate_requirement
+                print(data_res)
                 data_res['step'] = data['type']
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
@@ -104,6 +104,7 @@ def recruiter_agent(message, key, file):
 
                 candidate_data = screening_file if screening_file else candidate_filter
                 res = screening_candidate(candidate_data, candidate_requirement)
+                print(res)
                 res['step'] = data['type']
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
@@ -211,7 +212,7 @@ Now respond based on this user input:
     response_json = json.loads(response.text)
     return response_json
 
-def generate_requirement(message):
+async def generate_requirement(message):
     prompt = f"""
 You are a highly intelligent Recruitment Assistant AI. Your task is to create a clear and structured **Job Description** based on the user's input.
 
@@ -247,6 +248,9 @@ Here’s the user’s input:
             location="us-central1",
         )
         model = "gemini-2.5-pro-preview-05-06"
+        # chat = client.aio.chats.create(model=model)
+        # async for chunk in await chat.send_message_stream(prompt):
+        #     print(chunk.text, end='')
         response = client.models.generate_content(
             model=model,
             contents=prompt,
