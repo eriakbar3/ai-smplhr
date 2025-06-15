@@ -6,6 +6,18 @@ from utils.get_data import get_candidate_data_json
 import base64
 import traceback
 from typing import List, Dict
+from dotenv import load_dotenv
+import os
+load_dotenv()
+# genai.configure(api_key=os.getenv("GENAI_API_KEY"))
+print(os.getenv("GENAI_API_KEY"))
+key = os.getenv("GENAI_API_KEY")
+client = genai.Client(
+        vertexai=True,
+        project="smplhr",
+        location="us-central1",
+    )
+
 
 def recruiter_agent(message, key, file):
     try:
@@ -79,9 +91,11 @@ def recruiter_agent(message, key, file):
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
                 old_json['data'].append(res)
+                [step.update({"is_done": True}) for step in old_json["pipeline"] if step["type"] == data['type']]
                 new_value = json.dumps(old_json)
+                
                 set_value(key, new_value)
-
+                
                 candidate_filter = res.get('data', [])
                 print("Filtered candidates:", res)
 
@@ -92,9 +106,12 @@ def recruiter_agent(message, key, file):
                 candidate_data = screening_file if screening_file else candidate_filter
                 res = recommend_candidate(candidate_data, candidate_requirement)
                 res['step'] = data['type']
+                
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
                 old_json['data'].append(res)
+                old_json['status'] = "Stopped"
+                [step.update({"is_done": True}) for step in old_json["pipeline"] if step["type"] == data['type']]
                 new_value = json.dumps(old_json)
                 set_value(key, new_value)
 
@@ -104,10 +121,11 @@ def recruiter_agent(message, key, file):
 
                 candidate_data = screening_file if screening_file else candidate_filter
                 res = screening_candidate(candidate_data, candidate_requirement)
-                res['step'] = data['type']
+                
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
-                old_json['data'].append({"is_show_data": True, "need_input":False,"message": "Berikut data kandidat yang sudah melalui tahap screening:", "data": res})
+                old_json['data'].append({"is_show_data": True, "need_input":False,"message": "Berikut data kandidat yang sudah melalui tahap screening:", "data": res,"step":data['type']})
+                [step.update({"is_done": True}) for step in old_json["pipeline"] if step["type"] == data['type']]
                 new_value = json.dumps(old_json)
                 set_value(key, new_value)
 
@@ -195,11 +213,7 @@ If the job title is not clearly mentioned in the user input, return a clarificat
 Now respond based on this user input:
 "{message}"
 """
-    client = genai.Client(
-        vertexai=True,
-        project="smplhr",
-        location="us-central1",
-    )
+    
     model = "gemini-2.5-pro-preview-05-06"
     response = client.models.generate_content(
         model=model,
@@ -241,11 +255,6 @@ Here’s the user’s input:
 """
 
     try:
-        client = genai.Client(
-            vertexai=True,
-            project="smplhr",
-            location="us-central1",
-        )
         model = "gemini-2.5-pro-preview-05-06"
         response = client.models.generate_content(
             model=model,
@@ -284,6 +293,7 @@ Your task is to:
    - The job description
    - The structured user criteria provided below
    - The candidate's skills, experience, and position
+4. max candidate filtered is 10
 Your response must strictly follow this JSON structure:
 {{
   "message": "<brief explanation of the result, e.g., how many candidates found>",
@@ -296,13 +306,9 @@ User's job requirement description:
 
 Here is the list of candidate data:
 ```json
-{json.dumps(data_candidate, indent=2)}
+{data_candidate}
 """
-    client = genai.Client(
-            vertexai=True,
-            project="smplhr",
-            location="us-central1",
-        )
+
     model = "gemini-2.5-pro-preview-05-06"
     response = client.models.generate_content(
         model=model,
@@ -311,6 +317,7 @@ Here is the list of candidate data:
             "response_mime_type": "application/json",
         },
     )
+    print(response.text)
     response_json = json.loads(response.text)
     return response_json
 
@@ -340,7 +347,9 @@ Respond ONLY in this JSON format:
   "need_input":false,
   "data": [
     {{
-      "name": "<candidate name>",
+      "user_id":"<candidate user_id>"
+      "first_name": "<candidate first name>",
+      "last_name": "<candidate last name>",
       "email":"<candidate email>",
       "position":"<job position>",
       "score": <match score>,
@@ -357,11 +366,7 @@ Candidate List:
 ```json
 {json.dumps(candidate, indent=2)}
 """
-    client = genai.Client(
-            vertexai=True,
-            project="smplhr",
-            location="us-central1",
-        )
+
     model = "gemini-2.5-pro-preview-05-06"
     response = client.models.generate_content(
         model=model,
@@ -501,11 +506,7 @@ Candidate List:
 ```json
 {data_candidate}
 """
-    client = genai.Client(
-            vertexai=True,
-            project="smplhr",
-            location="us-central1",
-        )
+
     model = "gemini-2.5-pro-preview-05-06"
     response = client.models.generate_content(
         model=model,
@@ -549,11 +550,7 @@ Date: <date>
 Generate the JSON output.
 
 """
-    client = genai.Client(
-            vertexai=True,
-            project="smplhr",
-            location="us-central1",
-        )
+
     model = "gemini-2.5-pro-preview-05-06"
     response = client.models.generate_content(
         model=model,
@@ -603,11 +600,7 @@ We are hiring a Backend Developer with experience in Python, Django, and Postgre
 Now, generate the assessment JSON.
 
 """
-    client = genai.Client(
-            vertexai=True,
-            project="smplhr",
-            location="us-central1",
-        )
+
     model = "gemini-2.5-pro-preview-05-06"
     response = client.models.generate_content(
         model=model,
@@ -650,11 +643,7 @@ Output format must be in JSON like this:
 }}
 
 """
-    client = genai.Client(
-            vertexai=True,
-            project="smplhr",
-            location="us-central1",
-        )
+
     model = "gemini-2.5-pro-preview-05-06"
     response = client.models.generate_content(
         model=model,
