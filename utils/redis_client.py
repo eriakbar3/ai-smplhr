@@ -1,7 +1,7 @@
 import redis
 
 # Ganti sesuai alamat Redis kamu (bisa remote)
-r = redis.Redis(host='redis-19040.c278.us-east-1-4.ec2.redns.redis-cloud.com', port=19040, db=0, password='TkSrLYxc2nad2PlV6M4Q93UmNEllUmCQ', decode_responses=True)
+r = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
 
 def set_value(key: str, value: str):
     r.set(key, value)
