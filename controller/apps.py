@@ -12,10 +12,10 @@ async def recruiter_wrapper(text: str,key:str,file,pipeline):
     except Exception as e:
         print(f"[recruiter_agent error] {str(e)}")
 
-def run(text: str, background_tasks: BackgroundTasks,key,file):
+async def run(text: str, key):
     print(f"📝 Input: {text}")
     try:
-        result = agent_hr(text)
+        result = await agent_hr(text)
         print(result)
         init_data = {
             "status":"running",

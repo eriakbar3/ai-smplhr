@@ -12,7 +12,8 @@ import os
 load_dotenv()
 
 async def run_filter(data,step,key):
-    res = await agent_filter(json.dumps(data))
+    print(data)
+    res = await agent_filter(data)
     print("starting:", step)
     res['step'] = step
     get_old = get_value(key)
@@ -27,7 +28,7 @@ async def run_recommend(data,step,key,candidate_data):
     print("starting:", step)
 
     
-    res = agent_recommendation(candidate_data, data)
+    res = await agent_recommendation(candidate_data, data)
     res['step'] = step
     
     get_old = get_value(key)

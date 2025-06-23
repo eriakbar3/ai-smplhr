@@ -22,9 +22,9 @@ class GenerateRequest(BaseModel):
     text: str
     key:str
 
-def recruiter_wrapper(data,step,key):
+async def recruiter_wrapper(data,step,key):
     try:
-        next_recruiter_agent(data,step,key)
+        await next_recruiter_agent(data,step,key)
     except Exception as e:
         print(f"[recruiter_agent error] {str(e)}")
 
@@ -73,12 +73,12 @@ async def update_process(
 @router.post("/agent")
 async def agent(
     request:Request,
-    background_tasks: BackgroundTasks = None,
 ):
     try:
         base64_files = []
-        payload = request.json()
-        result = run(payload.text, background_tasks, payload.key,base64_files)
+        payload = await request.json()
+        print(payload)
+        result = await run(payload['message'],  payload['key'])
         return {"result":result}
 
     except Exception as e:
@@ -105,7 +105,7 @@ async def generate_route(
                 })
         # print("files",base64_files)
         # res = await extracted_cv(base64_files)
-        result = run(text, background_tasks, key,base64_files)
+        result = run(text,  key)
         return {"result":result}
 
     except Exception as e:

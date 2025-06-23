@@ -3,6 +3,7 @@ from google.adk.agents import Agent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
+from utils.init_pipeline import pipeline
 import json
 def generate_requirement():
     return f"""
@@ -24,15 +25,6 @@ Your output **must strictly follow this JSON Format**:
         ],
         "description": "<a concise and professional description summarizing the role, responsibilities, and qualifications>"
     }}
-    "pipeline": [
-        {{
-            "step": 1,
-            "type": "<action_type e.g. generate (generate reqruitement), filter (filter candidate), recommend (candidate recomendation), schedule (schedule interview), assess (assesment), and offer (offering)>", 
-            "message": "<direct message to user about what will be done>",
-            "is_done": false,
-            "title": "<process title>"
-        }}
-    ]
 }}
 
 Your job:
@@ -40,14 +32,10 @@ Your job:
 - If any data is missing, infer it reasonably based on context.
 - Ensure the **description** field is written in a formal tone, combining the job overview, key responsibilities, and qualifications into a coherent paragraph.
 - Format all fields according to their type (e.g., list for `skill`, string for `job_title`, `location`, `description`).
-- ganerate pipeline:
-   - Analyze the user's input to generate a structured recruitment pipeline.
-   - The pipeline may include steps like generating requirements,filter candidate, recommending, scheduling, assessing, and offering.
-   - If no clear job title is found, respond with a message asking the user to clarify.
 """
 
-def filter_candidate():
-    data_candidate = get_candidate_data_json()
+def filter_candidate(skill):
+    data_candidate = get_candidate_data_json(skill)
     prompt = f"""
 You are a recruitment assistant AI.
 
@@ -137,6 +125,7 @@ Respond ONLY in this JSON format:
 """
     return prompt
 async def agent_hr(message):
+    print(message)
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="application/json",
     )
@@ -171,17 +160,25 @@ async def agent_hr(message):
           # Add more checks here if needed (e.g., specific error codes)
           break
     print(final_response_text)
-    return json.loads(final_response_text)
+    res = json.loads(final_response_text)
+    res['pipeline'] = pipeline()
+    print(res)
+    return res
 
 async def agent_filter(criteria):
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="application/json",
     )
+    requirements = json.loads(criteria)
+    skill = requirements['skill']
+    
+    prompts =  filter_candidate(skill)
+    
     generate_agent = Agent(
         name="filter_candidate_agent",
         model="gemini-2.5-pro-preview-05-06", # Can be a string for Gemini or a LiteLlm object
         description="Provides job requirementes.",
-        instruction=filter_candidate(),
+        instruction=prompts,
         generate_content_config=generate_content_config
     )
     session_service = InMemorySessionService()
@@ -208,7 +205,7 @@ async def agent_filter(criteria):
           # Add more checks here if needed (e.g., specific error codes)
           break
     return json.loads(final_response_text)
-
+    # return []
 async def agent_recommendation(criteria,candidate):
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="application/json",
