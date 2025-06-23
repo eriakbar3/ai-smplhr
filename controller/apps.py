@@ -1,6 +1,7 @@
 from fastapi import BackgroundTasks
 from ai.ai import generate
 from ai.recruiter import recruiter_agent
+from ai.agent_hr import agent_hr
 from utils.vector_store import store_to_vector_db
 from utils.redis_client import set_value
 import json
@@ -14,24 +15,17 @@ async def recruiter_wrapper(text: str,key:str,file,pipeline):
 def run(text: str, background_tasks: BackgroundTasks,key,file):
     print(f"📝 Input: {text}")
     try:
-        result = generate(text)
+        result = agent_hr(text)
         print(result)
-        result_str = json.dumps(result)
         init_data = {
             "status":"running",
             "data":[result],
-            "step":"finding_agent",
+            "step":"generate",
             "pipeline":result['pipeline'],
-            "agent":result.get('agent')
+            "agent":"recruiter"
         }
         set_value(key,json.dumps(init_data))
-        if result.get('agent') == 'recruiter':
-            background_tasks.add_task(recruiter_wrapper, text,key,file,result['pipeline'])
-
-        return {
-            "result": result,
-            "recruiter_agent": "executed" if result.get('agent') == 'recruiter' else "skipped"
-        }
+        return result
     except Exception as e:
         print(f"❌ Terjadi kesalahan: {str(e)}")
         raise e

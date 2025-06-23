@@ -1,14 +1,17 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks,UploadFile, File, Form, Request
+from fastapi import APIRouter, Body, HTTPException, BackgroundTasks,UploadFile, File, Form, Request
 from pydantic import BaseModel
 from controller.apps import run,process_candidate
 from utils.redis_client import set_value,get_value
 import json
 import base64
-from ai.recruiter import extracted_cv,next_recruiter_agent
+from ai.recruiter import extracted_cv
+from ai.new_recruiter import next_recruiter_agent
 from utils.vector_store import search_vector_db
 from utils.get_data import get_candidate_data_json
-from typing import Any, Dict
+from typing import Any, Dict,List
+from ai.agent_hr import agent_hr,agent_filter,agent_recommendation
 
+import json
 router = APIRouter()
 class UpdateRequest(BaseModel):
     step: str
@@ -28,6 +31,36 @@ def recruiter_wrapper(data,step,key):
 @router.get("/")
 async def root():
     return {"message": "Hello, FastAPI!"}
+
+@router.post("/agent_hr")
+async def agent_ai(request: Request):
+    payload = await request.json()
+    print(payload)
+    response = await agent_hr(payload['message'])
+    return {"data":response}
+
+@router.post("/agent_filter")
+async def agent(request: Request):
+    payload = await request.json()
+    print(payload)
+    response = await agent_filter(json.dumps(payload['data']))
+    return {"data":response}
+
+
+
+
+@router.post("/agent_recommend")
+async def agent(
+    criteria: Dict[str, Any] = Body(...),
+    candidate: List[Dict[str, Any]] = Body(...)
+):
+    response = await agent_recommendation(
+        json.dumps(criteria),
+        json.dumps(candidate)
+    )
+    return {"data": response}
+
+
 @router.post("/update")
 async def update_process(
     request: UpdateRequest,
@@ -37,6 +70,19 @@ async def update_process(
     background_tasks.add_task(recruiter_wrapper, request.data,request.step,request.key)
     # await next_recruiter_agent(request.data,request.step,request.key)
     return {"status":"success"}
+@router.post("/agent")
+async def agent(
+    request:Request,
+    background_tasks: BackgroundTasks = None,
+):
+    try:
+        base64_files = []
+        payload = request.json()
+        result = run(payload.text, background_tasks, payload.key,base64_files)
+        return {"result":result}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 @router.post("/generate")
 async def generate_route(
     text: str = Form(...),

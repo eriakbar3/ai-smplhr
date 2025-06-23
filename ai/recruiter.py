@@ -122,7 +122,7 @@ async def recruiter_agent(message, key, file,pipeline):
                 candidate_data = screening_file if screening_file else candidate_filter
                 res = screening_candidate(candidate_data, candidate_requirement)
                 print(res)
-                res['step'] = data['type']
+                # res['step'] = data['type']
                 get_old = get_value(key)
                 old_json = json.loads(get_old)
                 old_json['data'].append({"is_show_data": True, "need_input":False,"message": "Berikut data kandidat yang sudah melalui tahap screening:", "data": res,"step":data['type']})
