@@ -108,6 +108,7 @@ Respond ONLY in this JSON format:
   "message": "<summary of how many candidates matched>",
   "is_show_data":true,
   "need_input":false,
+  "step":"generate",
   "data": [
     {{
       "user_id":"<candidate user_id>"
