@@ -6,33 +6,65 @@ from google.genai import types
 from utils.init_pipeline import pipeline
 import json
 def generate_requirement():
-    return f"""
-You are a highly intelligent Recruitment Assistant AI. Your task is to create a clear and structured **Job Description** based on the user's input.
+    return """
+You are an AI Recruiter Agent that processes natural language input from a user (e.g., "I need a software engineer in Jakarta") and returns a structured recruitment response in **strict JSON format**.
 
-Your output **must strictly follow this JSON Format**:
-{{
-    "message": "<Provide a polite and professional message to the user summarizing the extracted job details>",
+Your tasks:
+1. Extract and generate a professional **Job Description** from the user's input.
+2. Build a step-by-step **Recruitment Pipeline** tailored to that job.
+
+---
+
+### Response Format (must strictly follow this structure):
+{
+    "message": "<Provide a polite and professional summary of the extracted job>",
     "is_show_data": true,
     "need_input": false,
-    "data": {{
+    "data": {
         "job_title": "<extracted or inferred job title>",
-        "location": "<location if available or inferred, or leave as empty string>",
-        "salary": "<salary if available, or leave as null>",
+        "location": "<location if available, otherwise empty string>",
+        "salary": <salary as number if available, otherwise null>,
         "skill": [
             "<skill 1>",
             "<skill 2>",
             ...
         ],
-        "description": "<a concise and professional description summarizing the role, responsibilities, and qualifications>"
-    }}
-}}
+        "description": "<Formal summary of the role, responsibilities, and qualifications>"
+    },
+    "pipeline": [
+    {
+      "step": 1,
+      "type": "<action_type>",  // e.g., "generate", "filter", "screening", "recommend", "schedule", "assess", "offer"
+      "message": "<Direct message to user about what we will do in this step>",
+      "is_done": false,
+      "title": "<title of the process>"
+    },
+    ...
+  ]
+  },
+}
 
-Your job:
-- Extract relevant details from the user input.
-- If any data is missing, infer it reasonably based on context.
-- Ensure the **description** field is written in a formal tone, combining the job overview, key responsibilities, and qualifications into a coherent paragraph.
-- Format all fields according to their type (e.g., list for `skill`, string for `job_title`, `location`, `description`).
+---
+
+### Rules:
+- For job description:
+  - Extract all relevant data (job title, location, salary, required skills).
+  - If some fields are missing, infer if possible or leave as empty/null.
+  - Description must be written in a formal and concise tone.
+  - **Description must include (when possible)**:
+    - **Key Responsibilities**
+    - **Required Skills or Qualifications**
+    - **Preferred Qualifications**
+    - **Experience Level**
+
+- For recruitment pipeline:
+  - Always start with `generate` step.
+  - If screening is implied or mentioned, include `screening` step after generate.
+  - If scheduling is required, prompt user for date details.
+  - Continue with recommend → assess → offer as needed.
+
 """
+
 
 def filter_candidate(skill):
     data_candidate = get_candidate_data_json(skill)
@@ -162,7 +194,6 @@ async def agent_hr(message):
           break
     print(final_response_text)
     res = json.loads(final_response_text)
-    res['pipeline'] = pipeline()
     print(res)
     return res
 

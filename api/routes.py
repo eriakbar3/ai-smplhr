@@ -24,6 +24,7 @@ class GenerateRequest(BaseModel):
 
 async def recruiter_wrapper(data,step,key):
     try:
+        print(data,step,key)
         await next_recruiter_agent(data,step,key)
     except Exception as e:
         print(f"[recruiter_agent error] {str(e)}")
@@ -66,7 +67,7 @@ async def update_process(
     request: UpdateRequest,
     background_tasks: BackgroundTasks = None,
 ):
-    print(request)
+    print(request['step'])
     background_tasks.add_task(recruiter_wrapper, request.data,request.step,request.key)
     # await next_recruiter_agent(request.data,request.step,request.key)
     return {"status":"success"}
