@@ -10,7 +10,9 @@ from utils.vector_store import search_vector_db
 from utils.get_data import get_candidate_data_json
 from typing import Any, Dict,List
 from ai.agent_hr import agent_hr,agent_filter,agent_recommendation
-
+import concurrent.futures
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+import asyncio
 import json
 router = APIRouter()
 class UpdateRequest(BaseModel):
@@ -22,10 +24,14 @@ class GenerateRequest(BaseModel):
     text: str
     key:str
 
-async def recruiter_wrapper(data,step,key):
+def recruiter_wrapper(data,step,key):
     try:
-        await next_recruiter_agent(data,step,key)
+        print("to recruiter agent")
+        asyncio.run(next_recruiter_agent(data, step, key))
+        # await next_recruiter_agent(data,step,key)
+        
     except Exception as e:
+        print(data)
         print(f"[recruiter_agent error] {str(e)}")
 
 @router.get("/")
@@ -62,12 +68,13 @@ async def agent(
 
 
 @router.post("/update")
-async def update_process(
-    request: UpdateRequest,
-    background_tasks: BackgroundTasks = None,
+def update_process(
+    request: UpdateRequest
 ):
-    print(request)
-    background_tasks.add_task(recruiter_wrapper, request.data,request.step,request.key)
+    print(request.step)
+    # recruiter_wrapper(request.data, request.step, request.key)
+    executor.submit(recruiter_wrapper, request.data, request.step, request.key)
+    # background_tasks.add_task(recruiter_wrapper, request.data,request.step,request.key)
     # await next_recruiter_agent(request.data,request.step,request.key)
     return {"status":"success"}
 @router.post("/agent")

@@ -14,6 +14,7 @@ Your output **must strictly follow this JSON Format**:
     "message": "<Provide a polite and professional message to the user summarizing the extracted job details>",
     "is_show_data": true,
     "need_input": false,
+    "step":"generate",
     "data": {{
         "job_title": "<extracted or inferred job title>",
         "location": "<location if available or inferred, or leave as empty string>",
@@ -205,6 +206,7 @@ async def agent_filter(criteria):
              final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
           # Add more checks here if needed (e.g., specific error codes)
           break
+        print("filter response",final_response_text)
     return json.loads(final_response_text)
     # return []
 async def agent_recommendation(criteria,candidate):
@@ -241,4 +243,5 @@ async def agent_recommendation(criteria,candidate):
              final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
           # Add more checks here if needed (e.g., specific error codes)
           break
+        print("recommend response",final_response_text)
     return json.loads(final_response_text)

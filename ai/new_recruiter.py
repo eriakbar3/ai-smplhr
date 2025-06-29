@@ -8,14 +8,16 @@ import traceback
 from typing import List, Dict
 from ai.agent_hr import agent_filter,agent_recommendation
 from dotenv import load_dotenv
+
 import os
 load_dotenv()
 
-async def run_filter(data,step,key):
+async def run_filter(data,key):
     print(data)
     res = await agent_filter(data)
-    print("starting:", step)
-    res['step'] = step
+    print("starting:filter")
+    print("starting key :",key)
+    res['step'] = "filter"
     get_old = get_value(key)
     old_json = json.loads(get_old)
     old_json['data'].append(res)
@@ -24,28 +26,29 @@ async def run_filter(data,step,key):
     set_value(key, new_value)
     print("Filtered candidates:", res)
     return res
-async def run_recommend(data,step,key,candidate_data):
-    print("starting:", step)
+async def run_recommend(data,key,candidate_data):
+    print("starting:recommend")
 
-    
+    print("starting key :",key)
     res = await agent_recommendation(candidate_data, data)
-    res['step'] = step
+    res['step'] = "recommend"
     
     get_old = get_value(key)
     old_json = json.loads(get_old)
     old_json['data'].append(res)
     old_json['status'] = "Stopped"
-    [step.update({"is_done": True}) for step in old_json["pipeline"] if step["type"] == step]
+    [step.update({"is_done": True}) for step in old_json["pipeline"] if step["type"] == "recommend"]
     new_value = json.dumps(old_json)
     set_value(key, new_value)
 
     print("Recommendations:", res)
 async def next_recruiter_agent(data,step,key):
-    if step == 'filter':
-        res_filter = await run_filter(json.dumps(data),step,key)
-        res_recommend = await run_recommend(json.dumps(data),step,key,json.dumps(res_filter))
+    print("next")
+    if step == 'generate':
+        res_filter = await run_filter(json.dumps(data),key)
+        res_recommend = await run_recommend(json.dumps(data),key,json.dumps(res_filter))
     
-    if step == 'recommend':
+    if step == 'filter':
         get_old = get_value(key)
         old_json = json.loads(get_old)
         filtered_data = [item for item in data if item['step'] == 'filter']

@@ -51,7 +51,7 @@ def get_candidate_data_json(skills_list):
                 LEFT JOIN CandidateEducationDetail ced ON cpd.id = ced.profile_id
                 LEFT JOIN CandidateWorkExperienceDetail cwe ON cpd.id = cwe.profile_id
                 WHERE u.role = 'Candidate' AND cpd.skills REGEXP %s
-                LIMIT 50;"""
+                ;"""
         print(query)
         cursor.execute(query, (final_regex_param,))
         
