@@ -12,18 +12,23 @@ async def recruiter_wrapper(text: str,key:str,file,pipeline):
     except Exception as e:
         print(f"[recruiter_agent error] {str(e)}")
 
-async def run(text: str, key):
+async def run(text: str, key,files):
     print(f"📝 Input: {text}")
     try:
         result = await agent_hr(text)
         print(result)
+        result['pipeline'][0]['is_done'] = True
         init_data = {
             "status":"running",
             "data":[result],
             "step":"generate",
             "pipeline":result['pipeline'],
-            "agent":"recruiter"
+            "agent":"recruiter",
         }
+        files_data = {
+            "files":files
+        }
+        set_value(key+'-file',json.dumps(files_data))
         set_value(key,json.dumps(init_data))
         return result
     except Exception as e:

@@ -382,7 +382,7 @@ Candidate List:
     response_json = json.loads(response.text)
     return response_json
 
-def extracted_cv(files):
+async def extracted_cv(files):
     model = "gemini-2.5-pro-preview-05-06"
     text1 = types.Part.from_text(text="""You are an AI extractor tasked with reading and extracting structured information from all CV in PDF format. Extract the following key details accurately:
 

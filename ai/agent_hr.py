@@ -5,6 +5,7 @@ from google.adk.runners import Runner
 from google.genai import types
 from utils.init_pipeline import pipeline
 import json
+import base64
 def generate_requirement():
     return """
 You are an AI Recruiter Agent that processes natural language input from a user (e.g., "I need a software engineer in Jakarta") and returns a structured recruitment response in **strict JSON format**.
@@ -20,7 +21,8 @@ Your tasks:
     "message": "<Provide a polite and professional summary of the extracted job>",
     "is_show_data": true,
     "need_input": false,
-    "data": {
+    "step":"generate",
+    "data": {{
         "job_title": "<extracted or inferred job title>",
         "location": "<location if available, otherwise empty string>",
         "salary": <salary as number if available, otherwise null>,
@@ -34,7 +36,7 @@ Your tasks:
     "pipeline": [
     {
       "step": 1,
-      "type": "<action_type>",  // e.g., "generate", "filter", "screening", "recommend", "schedule", "assess", "offer"
+      "type": "<action_type>",  // e.g., "generate", "filter", "recommend", "schedule", "assess", "offer"
       "message": "<Direct message to user about what we will do in this step>",
       "is_done": false,
       "title": "<title of the process>"
@@ -51,6 +53,7 @@ Your tasks:
   - Extract all relevant data (job title, location, salary, required skills).
   - If some fields are missing, infer if possible or leave as empty/null.
   - Description must be written in a formal and concise tone.
+  - Description must detail & clear
   - **Description must include (when possible)**:
     - **Key Responsibilities**
     - **Required Skills or Qualifications**
@@ -66,8 +69,8 @@ Your tasks:
 """
 
 
-def filter_candidate(skill):
-    data_candidate = get_candidate_data_json(skill)
+def filter_candidate(data_candidate):
+    
     prompt = f"""
 You are a recruitment assistant AI.
 
@@ -157,6 +160,114 @@ Respond ONLY in this JSON format:
 
 """
     return prompt
+def extract_cv():
+   return """
+You are an AI extractor tasked with reading and extracting structured information from CVs in **PDF format**. Your goal is to accurately identify and return key personal and professional details from the document.
+
+### Extract the following information:
+
+1. Full name  
+2. Address  
+3. Email  
+4. Phone number  
+5. Date of birth (if available)  
+6. Education (institution name, major, start year, end year)  
+7. Work experience (position, company name, employment period, short description)  
+8. Skills  
+9. Certifications or training  
+10. Languages spoken  
+11. Notable projects (project name, description, role)  
+12. Links (LinkedIn, GitHub, portfolio – if available)
+
+---
+
+### Output Format:
+Return the extracted data in the following strict JSON structure:
+
+```json
+{
+  "name": "",
+  "address": "",
+  "email": "",
+  "phone": "",
+  "birth_date": "",
+  "education": [
+    {
+      "institution": "",
+      "major": "",
+      "year_in": "",
+      "year_out": ""
+    }
+  ],
+  "work_experience": [
+    {
+      "position": "",
+      "company": "",
+      "period": "",
+      "description": ""
+    }
+  ],
+  "skills": [],
+  "certifications": [],
+  "languages": [],
+  "projects": [
+    {
+      "name": "",
+      "description": "",
+      "role": ""
+    }
+  ],
+  "links": {
+    "linkedin": "",
+    "github": "",
+    "portfolio": ""
+  },
+  "additional_data": {}
+}
+"""
+async def agent_extract_cv(files):
+   result = []
+   for file in files :
+      data_file = types.Part.from_bytes(
+                    data=base64.b64decode(file['content_base64']),
+                    mime_type=file['mime_type']
+                )
+      generate_content_config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            )
+      generate_agent = Agent(
+            name="requirements_agent",
+            model="gemini-2.5-pro-preview-05-06", # Can be a string for Gemini or a LiteLlm object
+            description="Provides job requirementes.",
+            instruction=extract_cv(),
+            generate_content_config=generate_content_config
+        )
+      session_service = InMemorySessionService()
+      session = await session_service.create_session(
+            app_name="requirements_agent",
+            user_id="USER_ID",
+            session_id="SESSION_ID"
+        )
+      runner = Runner(
+            agent=generate_agent, # The agent we want to run
+            app_name="requirements_agent",   # Associates runs with our app
+            session_service=session_service
+        )
+      content = types.Content(role='user', parts=[data_file])
+      async for event in runner.run_async(user_id="USER_ID", session_id="SESSION_ID", new_message=content):
+        if event.is_final_response():
+            if event.content and event.content.parts:
+                # Assuming text response in the first part
+                final_response_text = event.content.parts[0].text
+            elif event.actions and event.actions.escalate: # Handle potential errors/escalations
+                final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
+            # Add more checks here if needed (e.g., specific error codes)
+            break
+        print(final_response_text)
+        res = json.loads(final_response_text)
+        result.append(res)
+   return result
+
 async def agent_hr(message):
     print(message)
     generate_content_config = types.GenerateContentConfig(
@@ -197,14 +308,14 @@ async def agent_hr(message):
     print(res)
     return res
 
-async def agent_filter(criteria):
+async def agent_filter(criteria,data_candidate):
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="application/json",
     )
     requirements = json.loads(criteria)
     skill = requirements['skill']
     
-    prompts =  filter_candidate(skill)
+    prompts =  filter_candidate(data_candidate)
     
     generate_agent = Agent(
         name="filter_candidate_agent",
@@ -236,6 +347,7 @@ async def agent_filter(criteria):
              final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
           # Add more checks here if needed (e.g., specific error codes)
           break
+        print("filter response",final_response_text)
     return json.loads(final_response_text)
     # return []
 async def agent_recommendation(criteria,candidate):
@@ -272,4 +384,5 @@ async def agent_recommendation(criteria,candidate):
              final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
           # Add more checks here if needed (e.g., specific error codes)
           break
+        print("recommend response",final_response_text)
     return json.loads(final_response_text)
